@@ -1,7 +1,8 @@
-
+import os
 import time
-import argsparse
+import argparse
 import numpy as np
+import pickle as pkl
 from functools import reduce
 from collections import defaultdict
 
@@ -10,16 +11,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 from dmp_ic import DMP_IC
-
-
-t0 = time.time()
-
-T.cuda.set_device(1)
-
-net_path = "../data/test_graph/twitter.npy"
-IC = DMP_IC(net_path, device=T.device("cpu"), threshold=10)
-
-G = IC.G
 
 def find_top_K(idx, K, overlap, uncover_rate):
 
@@ -59,7 +50,7 @@ def find_top_K(idx, K, overlap, uncover_rate):
 
     return top_k
 
-def Penal_K(K, lr=0.001, iter=10, rand=False, eval_step=True):
+def Penal_K(K, lr, iter, OverLap, OverLapRate, eval_step=True):
     S = T.zeros(IC.N, requires_grad=True)
     opt = optim.SGD([S], lr=lr)
 
@@ -67,6 +58,7 @@ def Penal_K(K, lr=0.001, iter=10, rand=False, eval_step=True):
     Seed_Results = defaultdict(list)
     
     for i in range(1, iter):
+        tts = time.time()
         opt.zero_grad()
         Seed = T.sigmoid(S)
         Sigmas =IC.run(Seed)
@@ -75,7 +67,9 @@ def Penal_K(K, lr=0.001, iter=10, rand=False, eval_step=True):
         loss = -Sigmas[-1] + penal
         loss.backward()
         opt.step()
+        tte = time.time()
         
+        tes = time.time()
         if eval_step: 
             Step_Inf =[]
 
@@ -89,17 +83,17 @@ def Penal_K(K, lr=0.001, iter=10, rand=False, eval_step=True):
             Seed_Results["0"].append([Seed0, INF0])
 
             # K>0
-            for overlap in [1, 2]:
-                for uncover_rate in [0.3, 0.5, 0.8, 1]:
+            for overlap in OverLap:
+                for uncover_rate in OverLapRate:
                     Seed = find_top_K(idx, K, overlap=overlap, uncover_rate=uncover_rate)
                     _Seed = T.zeros(IC.N); _Seed[Seed] = 1
                     Inf = IC.run(_Seed)[-1].item()
                     Step_Inf.append(Inf)
 
                     Seed_Results[str(overlap)+"_"+str(uncover_rate)].append([Seed, Inf])
-
+            tee = time.time()
             Step_Inf_Max = max(Step_Inf)
-            print("DMP_Step_Inf_Max = {:.2f}".format(Step_Inf_Max))
+            print("Inf_Max={:.2f}, Train_Time={:.2f}s, Eval_Time={:.2f}s".format(Step_Inf_Max, tte-tts, tee-tes))
 
             if Step_Inf_Max <= BEST_INF:
                 #break
@@ -109,16 +103,47 @@ def Penal_K(K, lr=0.001, iter=10, rand=False, eval_step=True):
 
     return Seed_Results
 
-Results_Dict = []
-for k in range(1, 51, 3):
-    print(">>>>>>{}<<<<<<".format(k))
-    Results_Dict.append(Penal_K(k))
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--Data_name", type=str, help="graph's name")
+    parser.add_argument("--Lr", type=float, help="learning rate")
+    parser.add_argument("--Thr", type=float, help="threshold of stopping in DMP")
+    parser.add_argument("--Space", type=int, help="step length of seed set size")
+    parser.add_argument("--Iter", type=int, help="maximum iteration times of optim")
+    parser.add_argument("--Max_Iter", type=int, help="maximum iteration times of DMP")
+    parser.add_argument("--OverLap", type=int, nargs="+", help="OverLap order list")
+    parser.add_argument("--OverLapRate", type=float,  nargs='+', help="OverLap rate list")
+    args = parser.parse_args()
+
+    Data_name = args.Data_name
+    Lr = args.Lr
+    Threshold = args.Thr
+    Space = args.Space
+    Iter = args.Iter
+    Max_Iter = args.Max_Iter
+    OverLap = args.OverLap
+    OverLapRate = args.OverLapRate
+    
+    uniq_log = "_".join([str(k)+"_"+str(v) for k, v in vars(args).items()])
+    
+    net_path = "../data/test_graph/{}.npy".format(Data_name)
+    if not os.path.exists("../results/{}".format(Data_name)):
+        os.mkdir("../results/{}".format(Data_name))
+    
+    save_path = "../results/{}/{}.pkl".format(Data_name, uniq_log)
+
+    IC = DMP_IC(net_path, T.device("cpu"), Threshold, Max_Iter)
+    G = IC.G
+
+    Results_Dict = []
+    for k in range(1, 51, Space):
+        print(">>>>>>{}<<<<<<".format(k))
+        Results_Dict.append(Penal_K(k, Lr, Iter, OverLap, OverLapRate))
+        print("*"*40)
      
-import pickle as pkl
 
-save_path = "../results/Twitter_overlap_Lr_1E-3_dmp_10"
+    with open("{}.pkl".format(save_path), "wb") as f:
+        pkl.dump(Results_Dict, f)
 
-with open("{}.pkl".format(save_path), "wb") as f:
-    pkl.dump(Results_Dict, f)
-
-print(save_path, " saved!")
+    print(save_path, " saved!")

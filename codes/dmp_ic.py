@@ -6,7 +6,7 @@ import pickle as pkl
 import time
 
 class DMP_IC():
-    def __init__(self, net_path, device, threshold): 
+    def __init__(self, net_path, device, threshold, max_iter): 
         with open(net_path, "rb") as f:
             self.edge_list = pkl.load(f)
         # edge_list with size [3, E], (src_node, tar_node, weight) 
@@ -26,6 +26,7 @@ class DMP_IC():
         self.G.add_edges_from(self.edge_list[:2].T)
 
         self.threshold = threshold
+        self.max_iter = max_iter
 
     def _set_seeds(self, seed_list):
         self.seeds = seed_list if T.is_tensor(seed_list) else T.Tensor(seed_list)
@@ -62,9 +63,14 @@ class DMP_IC():
         self.Ps_i = self.Ps_i_0 * scatter_mul(self.Theta_t, index=self.tar_nodes)
         return sum(1-self.Ps_i)
         
+    def theta_aggr(self):
+        theta = scatter_mul(self.Theta_t, index=self.tar_nodes)
+
+        return theta, self.Ps_i
+
     def run(self, seed_list):
         self._set_seeds(seed_list)
-        while True:
+        for _ in range(self.max_iter):
             self.forward()
             new_inf = self.influence()
 
@@ -75,7 +81,3 @@ class DMP_IC():
 
         return self.inf_log
 
-    def theta_aggr(self):
-        theta = scatter_mul(self.Theta_t, index=self.tar_nodes)
-
-        return theta, self.Ps_i
