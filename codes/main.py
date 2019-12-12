@@ -1,14 +1,17 @@
-from functools import reduce
+
+import time
+import argsparse
 import numpy as np
+from functools import reduce
 from collections import defaultdict
 
 import torch as T
-import torch
 import torch.nn.functional as F
 import torch.optim as optim
+
 from dmp_ic import DMP_IC
 
-import time
+
 t0 = time.time()
 
 T.cuda.set_device(1)

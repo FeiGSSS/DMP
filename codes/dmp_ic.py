@@ -6,8 +6,7 @@ import pickle as pkl
 import time
 
 class DMP_IC():
-    
-    def __init__(self, net_path, device): 
+    def __init__(self, net_path, device, threshold): 
         with open(net_path, "rb") as f:
             self.edge_list = pkl.load(f)
         # edge_list with size [3, E], (src_node, tar_node, weight) 
@@ -25,6 +24,8 @@ class DMP_IC():
 
         self.G = nx.DiGraph()
         self.G.add_edges_from(self.edge_list[:2].T)
+
+        self.threshold = threshold
 
     def _set_seeds(self, seed_list):
         self.seeds = seed_list if T.is_tensor(seed_list) else T.Tensor(seed_list)
@@ -67,7 +68,7 @@ class DMP_IC():
             self.forward()
             new_inf = self.influence()
 
-            if abs(new_inf - self.inf_log[-1]) < 10:
+            if abs(new_inf - self.inf_log[-1]) < self.threshold:
                 break
             else:
                 self.inf_log.append(new_inf)
