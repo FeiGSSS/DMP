@@ -2,37 +2,27 @@ import sys
 sys.path.append("..")
 
 from codes.mc_ic import MC_IC
-from codes.dmp_ic import DMP_IC
 import pickle as pkl
-import torch
 
+import argparse
 
-data = "twitter"
-net_path = "../data/test_graph/{}.npy".format(data)
-IC = DMP_IC(net_path=net_path)
+parser = argparse.ArgumentParser()
+parser.add_argument("--Data_name", type=str, help="graph's name")
+args = parser.parse_args()
 
-with open("{}_imm_range.pkl".format(data), "rb") as f:
+data_name = args.Data_name
+net_path = "../data/test_graph/{}.npy".format(data_name)
+
+with open("{}_imm_range.pkl".format(data_name), "rb") as f:
     seed_list = pkl.load(f)
-    
-    
 
-dmp_mc_re = []
+res = {}
 for seed in seed_list:
-    tmp = []
-    # DMP
-    S = torch.zeros(IC.N); S[seed]=1
-    tmp.append(IC.run(S)[-1].item())
+    infs = MC_IC(net_path, seed, mc=5000, nproc=40)
+    res[len(seed)] = [seed, infs[-1]]
+    print(len(seed), infs[-1])
     
-    # MC
-    tmp.append(MC_IC(net_path, seed, mc=1000)[-1])
-    
-    dmp_mc_re.append(tmp)
-    
-    print(len(seed))
-    
-save_path = "../results/{}_imm.pkl".format(data)
+save_path = "./{}_imm_infs.pkl".format(data_name)
 with open(save_path, "wb") as f:
-    pkl.dump(dmp_mc_re, f)
-    
+    pkl.dump(res, f)
 print("saved to ", save_path)
-print(dmp_mc_re)

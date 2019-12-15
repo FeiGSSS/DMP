@@ -75,12 +75,6 @@ def Penal_K(K, lr, iter, OverLap, OverLapRate, eval_step=True):
 
             Seed = T.sigmoid(S)
             idx = T.argsort(Seed, descending=True)
-            # K=0
-            Seed0 = find_top_K(idx, K, overlap=0, uncover_rate=0)
-            _Seed0 = T.zeros(IC.N); _Seed0[Seed0] = 1
-            INF0 = IC.run(_Seed0)[-1].item()
-            Step_Inf.append(INF0)
-            Seed_Results["0"].append([Seed0, INF0])
 
             # K>0
             for overlap in OverLap:
@@ -137,13 +131,16 @@ if __name__ == "__main__":
     G = IC.G
 
     Results_Dict = []
+    print("*"*72)
+    print(uniq_log)
+    print("*"*72)
     for k in range(1, 51, Space):
         print(">>>>>>{}<<<<<<".format(k))
         Results_Dict.append(Penal_K(k, Lr, Iter, OverLap, OverLapRate))
-        print("*"*40)
+        print("*"*20)
      
 
-    with open("{}.pkl".format(save_path), "wb") as f:
+    with open(save_path, "wb") as f:
         pkl.dump(Results_Dict, f)
 
     print(save_path, " saved!")

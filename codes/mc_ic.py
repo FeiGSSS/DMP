@@ -51,14 +51,14 @@ def MC_IC_cpu(net_path, seed_list, mc):
 
     return np.mean(np.array(active_log_max), axis=0)
 
-def MC_IC(net_path, seed_list, mc, cpu=1):
+def MC_IC(net_path, seed_list, mc, nproc=40):
     active_log = []
     from multiprocessing import Pool
-    pool = Pool(cpu)
+    pool = Pool(nproc)
 
     res = []
-    for c in range(cpu):
-        res.append(pool.apply_async(MC_IC_cpu, (net_path, seed_list, int(mc/cpu))))
+    for c in range(nproc):
+        res.append(pool.apply_async(MC_IC_cpu, (net_path, seed_list, int(mc/nproc))))
     pool.close()
     pool.join()
 
