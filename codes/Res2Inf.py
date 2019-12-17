@@ -51,18 +51,13 @@ if __name__ == "__main__":
     parser.add_argument("--Max_Iter", type=int, help="maximum iteration times of DMP")
     parser.add_argument("--OverLap", type=int, nargs="+", help="OverLap order list")
     parser.add_argument("--OverLapRate", type=float,  nargs='+', help="OverLap rate list")
+    parser.add_argument("--Seed0", type=int, default=1)
+    parser.add_argument("--Penal", type=int, default=1)
     args = parser.parse_args()
 
     Data_name = args.Data_name
-    Lr = args.Lr
-    Threshold = args.Thr
-    Space = args.Space
-    Iter = args.Iter
-    Max_Iter = args.Max_Iter
-    OverLap = args.OverLap
-    OverLapRate = args.OverLapRate
 
-    uniq_log = "_".join([str(k)+"_"+str(v) for k, v in vars(args).items()]) 
+    uniq_log = "_".join([str(k)+"_"+str(v) if v !=None else ""  for k, v in vars(args).items()]) 
 
     print(uniq_log, " evaluation begin~")
     influence(Data_name, uniq_log) 

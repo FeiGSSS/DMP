@@ -50,10 +50,11 @@ def find_top_K(idx, K, overlap, uncover_rate):
 
     return top_k
 
-def Penal_K(K, lr, iter, OverLap, OverLapRate, eval_step=True):
+def Penal_K(K, lr, iter, OverLap, OverLapRate, Penal=True, eval_step=True):
     S = T.zeros(IC.N, requires_grad=True)
     opt = optim.SGD([S], lr=lr)
 
+    S = S.to(device)
     BEST_INF = 0
     Seed_Results = defaultdict(list)
     
@@ -64,7 +65,10 @@ def Penal_K(K, lr, iter, OverLap, OverLapRate, eval_step=True):
         Sigmas =IC.run(Seed)
 
         penal = T.pow(Seed.sum()-K, 2)
-        loss = -Sigmas[-1] + penal
+        if Penal:	
+            loss = -Sigmas[-1] + penal
+        else:
+            loss = -Sigmas[-1]
         loss.backward()
         opt.step()
         tte = time.time()
@@ -72,7 +76,6 @@ def Penal_K(K, lr, iter, OverLap, OverLapRate, eval_step=True):
         tes = time.time()
         if eval_step: 
             Step_Inf =[]
-
             Seed = T.sigmoid(S)
             idx = T.argsort(Seed, descending=True)
 
@@ -87,7 +90,8 @@ def Penal_K(K, lr, iter, OverLap, OverLapRate, eval_step=True):
                     Seed_Results[str(overlap)+"_"+str(uncover_rate)].append([Seed, Inf])
             tee = time.time()
             Step_Inf_Max = max(Step_Inf)
-            print("Inf_Max={:.2f}, Train_Time={:.2f}s, Eval_Time={:.2f}s".format(Step_Inf_Max, tte-tts, tee-tes))
+
+            print("Loss={:.2f}, Inf_Max={:.2f}, Train_Time={:.2f}s, Eval_Time={:.2f}s".format(loss.item(), Step_Inf_Max, tte-tts, tee-tes))
 
             if Step_Inf_Max <= BEST_INF:
                 #break
@@ -108,6 +112,8 @@ if __name__ == "__main__":
     parser.add_argument("--Max_Iter", type=int, help="maximum iteration times of DMP")
     parser.add_argument("--OverLap", type=int, nargs="+", help="OverLap order list")
     parser.add_argument("--OverLapRate", type=float,  nargs='+', help="OverLap rate list")
+    parser.add_argument("--Seed0", type=int,  default=1, help="the smallest seed size")
+    parser.add_argument("--Penal", type=int,  default=1, help="whether to use penality")
     args = parser.parse_args()
 
     Data_name = args.Data_name
@@ -118,6 +124,8 @@ if __name__ == "__main__":
     Max_Iter = args.Max_Iter
     OverLap = args.OverLap
     OverLapRate = args.OverLapRate
+    Seed0 = args.Seed0
+    Penal = args.Penal
     
     uniq_log = "_".join([str(k)+"_"+str(v) for k, v in vars(args).items()])
     
@@ -127,16 +135,18 @@ if __name__ == "__main__":
     
     save_path = "../results/{}/{}.pkl".format(Data_name, uniq_log)
 
-    IC = DMP_IC(net_path, T.device("cpu"), Threshold, Max_Iter)
+    device = T.device("cpu")
+
+    IC = DMP_IC(net_path, device, Threshold, Max_Iter)
     G = IC.G
 
     Results_Dict = []
     print("*"*72)
     print(uniq_log)
     print("*"*72)
-    for k in range(1, 51, Space):
+    for k in range(Seed0, 51, Space):
         print(">>>>>>{}<<<<<<".format(k))
-        Results_Dict.append(Penal_K(k, Lr, Iter, OverLap, OverLapRate))
+        Results_Dict.append(Penal_K(k, Lr, Iter, OverLap, OverLapRate, Penal))
         print("*"*20)
      
 
