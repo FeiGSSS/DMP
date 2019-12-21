@@ -2,6 +2,7 @@ import pickle as pkl
 import numpy as np
 import torch as T
 import torch.nn as nn
+import torch.multiprocessing as mp
 from torch_scatter import scatter_add
 
 class IC(nn.Module):
@@ -59,5 +60,4 @@ def MC_RUN(net_path, seed_list, mc, device):
     max_steps = max([len(log) for log in active_log])
     active_log_max = [log+[log[-1]]*(max_steps-len(log)) for log in active_log]
 
-    return np.mean(np.array(active_log_max), axis=0)
-
+    return np.mean(np.array(active_log_max), axis=0)[-1]

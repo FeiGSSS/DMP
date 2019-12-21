@@ -62,7 +62,7 @@ def sampling(epsoid, l):
     n = node_num
     k = seed_size
     epsoid_p = epsoid * math.sqrt(2)
-    worker_num = 2
+    worker_num = 10
     create_worker(worker_num)
     for i in range(1, int(math.log2(n-1))+1):
         s = time.time()

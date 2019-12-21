@@ -16,7 +16,7 @@ from mc_ic import MC_IC
 from utils import find_top_K, Greedy_K
 
 def Optimize(args, net_path, eval_step=True) :
-    S = T.zeros(IC.N, requires_grad=True, device=device)
+    S = T.zeros(IC.N, requires_grad=True, device=device_opt)
     opt = optim.SGD([S], lr=args.Lr)
 
     
@@ -37,10 +37,12 @@ def Optimize(args, net_path, eval_step=True) :
     idx = T.argsort(S, descending=True)
     Seed_Prepar = find_top_K(G, idx, 51, overlap=args.OverLap, uncover_rate=args.OverLapRate)
     #Seed_Prepar = Greedy_K(IC, device, idx, 51)
+    print("Eval Start ...... ")
     for K in range(args.Seed0, 51, args.Space):
-        Mc_Inf = MC_RUN(net_path, Seed_Prepar[:K], mc=1000, device=device)[-1]
-        #Mc_Inf = MC_IC(net_path, Seed_Prepar[:K], mc=2000)[-1]
-        print("{} : opt={:.1f}".format(K, Mc_Inf))
+        ts = time.time()
+        Mc_Inf = MC_RUN(net_path, Seed_Prepar[:K], mc=1000, device=device_eva)
+        te = time.time()
+        print("{} : opt={:.1f} eval_time={:.1f}s".format(K, Mc_Inf, te-ts))
         SeedSize_Inf[K] = Mc_Inf
     print("")
 
@@ -76,10 +78,13 @@ if __name__ == "__main__":
     
     save_path = "../results/{}/Once_{}.pkl".format(Data_name, uniq_log)
 
-    device = T.device("cuda:2")
-
-    IC = DMP_IC(net_path, device, Max_Iter)
+    device_opt = T.device("cpu")
+    device_eva = T.device("cuda:0")
+    print("Preparing DMP module for {} .. ".format(Data_name))
+    ts = time.time()
+    IC = DMP_IC(net_path, device_opt, Max_Iter)
     G = IC.G
+    print("Done, cost {:.1f}s".format(time.time()-ts))
 
     print("*"*72)
     print(uniq_log)
