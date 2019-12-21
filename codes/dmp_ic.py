@@ -6,7 +6,7 @@ import pickle as pkl
 import time
 
 class DMP_IC():
-    def __init__(self, net_path, device, threshold, max_iter): 
+    def __init__(self, net_path, device, max_iter): 
         with open(net_path, "rb") as f:
             self.edge_list = pkl.load(f)
         # edge_list with size [3, E], (src_node, tar_node, weight) 
@@ -25,7 +25,6 @@ class DMP_IC():
         self.G = nx.DiGraph()
         self.G.add_edges_from(self.edge_list[:2].T)
 
-        self.threshold = threshold
         self.max_iter = max_iter
 
     def _set_seeds(self, seed_list):
@@ -61,7 +60,7 @@ class DMP_IC():
     def influence(self):
         # Ps_i : the probability of node i being S 
         self.Ps_i = self.Ps_i_0 * scatter_mul(self.Theta_t, index=self.tar_nodes)
-        return sum(1-self.Ps_i)
+        return T.sum(1-self.Ps_i)
         
     def theta_aggr(self):
         theta = scatter_mul(self.Theta_t, index=self.tar_nodes)
@@ -74,7 +73,7 @@ class DMP_IC():
             self.forward()
             new_inf = self.influence()
 
-            if abs(new_inf - self.inf_log[-1]) < self.threshold:
+            if abs(new_inf - self.inf_log[-1]) < 1.0:
                 break
             else:
                 self.inf_log.append(new_inf)

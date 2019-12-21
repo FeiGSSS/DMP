@@ -4,7 +4,7 @@ import time
 
 t0 = time.time()
 
-data_name = "bad_case"
+data_name = "LiveJournal1"
 
 with open("./graph_txt/"+data_name+".txt", "r") as f:
     tri_lines = []
